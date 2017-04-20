@@ -167,7 +167,7 @@ module jnt(d, g, s, b);
                        
             //Mobility
             mu = 100.0;
-            mu = mu/(1.0+theta*max((Vgs-Vfb),0.0));
+            mu = mu/(1.0+theta*max(((Vgs-Vfb)*tanh(Vgs-Vfb)),0.0));
              
 
             Vg2=Vfb*(1.0-ln(1.0+ limexp(cte*(1.0- ((Vgs)/Vfb))))/ln(1.0+limexp(cte)));
