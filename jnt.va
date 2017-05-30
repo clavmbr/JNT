@@ -41,15 +41,15 @@ module jnt(d, g, s, b);
     parameter real theta = 0.125;
 
 		
-	analog function real limln;
-        input in;
-        real in;
+    analog function real limln;
+    input in;
+    real in;
         begin
             if (in < 0)
                 limln = ln (1.0e-80);
             else
                 limln = ln (in);
-        end
+            end
     endfunction //limln
 
     //Densidade de estados
@@ -61,20 +61,19 @@ module jnt(d, g, s, b);
         end
     endfunction //Nx
 	
-	
-	analog function real real_sqrt;
+    analog function real real_sqrt;
         input op;
         real op;
         begin
             if (op < 0 )
-		        real_sqrt = 0;
-		    else
-			    real_sqrt = sqrt (op);
-		end
+                real_sqrt = 0;
+            else
+                real_sqrt = sqrt (op);
+            end
     endfunction //real_sqrt
 	
-	//Temperature in Kelvin
-    real T;
+     //Temperature in Kelvin
+     real T;
 
     //Effective masses
     real mt, mde, mdh, mce;
@@ -103,49 +102,47 @@ module jnt(d, g, s, b);
     real Vg22, Vg22b, Vg33, phisdepL, phisaccL, phisL, Qcd;
     real mu, Id;
 
-	
-	
-	analog begin
-	
-	    begin : evaluate
+    analog begin
+        begin : evaluate
             Vds = V(d, s);
             Vds_in = Vds;
             Vgs = V(g, s);
             Vsub = V(b, s);
 
-		    //Celcius to Kelvin
-			T = tnom + `P_CELSIUS0;
-			//Masses
-			mt = 0.1913 - (4.042E-5)*T + ((1.392E-6)*(pow(T, 2))) - ((4.326E-9)*(pow(T, 3))) + ((4.42E-12)*(pow(T, 4)));
+            //Celcius to Kelvin
+            T = tnom + `P_CELSIUS0;
+
+            //Masses
+            mt = 0.1913 - (4.042E-5)*T + ((1.392E-6)*(pow(T, 2))) - ((4.326E-9)*(pow(T, 3))) + ((4.42E-12)*(pow(T, 4)));
             mde = pow((6.0*sqrt(ml*(mt*mt))), (2.0/3.0));
             mdh =  0.5906 - 2.45E-4*T + 1.1504E-5*pow(T, 2) - 4.115E-8*pow(T,3) + 4.502E-11*pow(T, 4);
             mce = 1.0/((1.0/3.0)*(1.0/ml+  2.0 / mt ));
-			
-			Nd=Ndop;
-			
-			//States density
+
+            Nd=Ndop;
+
+            //States density
             Nv = Nx(T, mdh);
             Nc = Nx(T, mde);
-            
-			//Energy gap
+
+            //Energy gap
             Eg = 1.1696 - 4.73e-4*(T*T)/(636+T);
-            
-			//Intrinsic Concentration
+
+            //Intrinsic Concentration
             ni =  sqrt(Nc*Nv) * exp(-Eg*`P_Q/(2.0*`P_K*T));
-            
-			//Thermical Potentialsim/:jnt
+
+            //Thermical Potentialsim/:jnt
             fit = `P_K*T/`P_Q;
-			
-		    //
+
+            //
             FiBS = fit * limln(Nd*1.0E15/(ni*ni));
             Vsub2=(FiBS+10.0)*(1.0+limln(1+limexp(5.0*(-1.0+(Vsub+10.0)/(FiBS+10.0)))) /(limln(1.0+limexp(5.0))))-10.0;
             xdepl = (-esi)/(eox/tbox) + sqrt((esi/(eox/tbox))*(esi/(eox/tbox))+2.0*esi*(Vsub2-Vsub)/(`P_Q*Nd));
             H2 = H - H*(1.0-ln(1+limexp(4.0*(1.0-(xdepl)/(H))))/(ln(1.0+limexp(4.0))));
-            
+
             //Capacitance
             Cox =  eox*((2.0 * H2 + W ) / tox + 2.3);
             Wox = 2.0*H+W;
-                    
+
             //Fermi Potential
             fif = fit *limln (Nd/ni);
             FiMS =  fif + (Eg/2.0) + d_FiMS;
@@ -155,91 +152,68 @@ module jnt(d, g, s, b);
             De = `P_Q*Nd*esi*(Wox*Wox);
             Ypot = De/(Cox*Cox);
             Qsi = `P_Q*Nd*W*H2-(eox*((W+2.0*tox*(H2-W)/W)/tbox))*(FiBS-Vsub2);
-            
-            
 
-            
             //Tensão de Limiar
             Vt = FiMS - Qsi/Cox - (1.0/(`P_Q*Nd))*((Qsi*Qsi)/(esi*(2.0*H+W)*(2.0*H+W) ));
 
             //Constantes para calculo da função de suavização
             cte = 18.0-cte_a1/(1.0+limexp(-cte_a2 *(Vgs-Vt)));
             cte2 = (Vt+2.0)/(2.0*1.0*fit);
-                       
+
             //Mobility
             mu = 100.0;
             mu = mu/(1.0+theta*max(((Vgs-Vfb)*tanh(4.0*(Vgs-Vfb))),0.0));
-             
 
             Vg2=Vfb*(1.0-ln(1.0+ limexp(cte*(1.0- ((Vgs)/Vfb))))/ln(1.0+limexp(cte)));
             Vg3 = Vt+(Vt+2.0)*(ln(1.0+limexp(cte2*(-1.0+((Vg2+2.0)/(Vt+2.0)))))/ln(1.0+limexp(cte2)) );           
             phisdep = Vg2 - Vfb - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg3-Vfb) );
 
-
             lambda1 = sqrt((esi*W*tox/(4.0*eox))*(1.0+eox*W/(2.0*esi*tox)));
             lambda2 = sqrt((esi*H*tox/(4.0*eox))*(1.0+eox*H/(2.0*esi*tox)));
             lambda = 1.0/(sqrt((1.0/lambda1)*(1.0/lambda1)+(0.5/lambda2)*(0.5/lambda2)));
-            
-                   
             U = phisdep-Vds; //V = phisdep  
             xmin = (lambda/2)*ln(abs((U*limexp(L/lambda)-phisdep)/(phisdep-U*limexp(-L/lambda))));
-
             phimin = (phisdep*sinh(xmin/lambda)+U*sinh((L-xmin)/lambda))/(sinh(L/lambda));
             Vgs = Vgs-phimin;
-            
 
-        //Qcs    
+            //Qcs    
             Vg2=Vfb*(1.0-ln(1.0+ limexp(cte*(1.0- ((Vgs)/Vfb))))/ln(1.0+limexp(cte)));
             Vg3 = Vt+(Vt+2.0)*(ln(1.0+limexp(cte2*(-1.0+((Vg2+2.0)/(Vt+2.0)))))/ln(1.0+limexp(cte2)) );
-            
             phisdep = Vg2 - Vfb - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg3-Vfb) );
             phisacc = fit*ln(1.0+ ((Vgs-Vg2)*(Vgs-Vg2)/(Ypot*fit)));
-
             phis = phisacc + phisdep;
             Qcs = (Vgs - Vfb - phis)*Cox + Qsi;
 
-
-
-            
             //Efective Vds
             Qsat = -vsat*L*Cox/mu + sqrt( (vsat*L*Cox/mu)*(vsat*L*Cox/mu) + Qcs*Qcs);
             Vdsat = (1/Ypot)*( (((Qsi/Cox)-(Qsat/Cox)+(Ypot/2))*((Qsi/Cox)-(Qsat/Cox)+(Ypot/2))) - ((Ypot/2)*(Ypot/2)) ) -Vfb + Vgs;
-
             Ats = 2.0;
             Vdsat = fit + fit*(ln(1.0+limexp((Vdsat-fit)/fit))/ln(1.0+limexp(1.0)));
             Vds = Vdsat *(1.0-(ln(1.0+limexp(Ats*(1.0-Vds/Vdsat))))/(ln(1.0+limexp(Ats))));
-            
 
             //Qcd
             Vg22=Vfb*(1.0-ln(1.0+ limexp(cte*(1.0- ((Vgs-Vds)/Vfb))))/ln(1.0+limexp(cte)));
             Vg22b=(Vfb+Vds_in-Vds)*(1.0-ln(1.0+ limexp(cte*(1.0- ((Vgs)/(Vfb+Vds_in-Vds)))))/ln(1.0+limexp(cte)));            
             Vg33 = Vt+(Vt+Vds_in-Vds+2.0)*(ln(1.0+limexp(cte2*(-1.0+((Vg22+2.0)/(Vt+Vds_in-Vds+2.0)))))/ln(1.0+limexp(cte2)) );            
-            
             phisdepL = Vg22 - Vfb + Vds - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg33-Vfb) );
             phisaccL = fit*ln(1.0+ ((Vgs-Vg22b)*(Vgs-Vg22b)/(Ypot*fit)));
-
             phisL = phisaccL + phisdepL;
             Qcd = (Vgs - Vfb - phisL)*Cox + Qsi;            
-
 
             //Effective Channel Lenght
             alfa = `P_Q*Nd/(2.0*esi);
             Lsat =  sqrt( (Vdsat/(2*alfa*L))*(Vdsat/(2*alfa*L)) +max((Vds_in-Vdsat),0.0)/alfa) -Vdsat/(2*alfa*L);
             Lsat = max(Lsat,0.0)*tanh(2.5*(Vds_in-Vdsat));//Matlab renan
 
-
             //Mobility Degradation
             mu = mu / (1.0 + (Vds * mu)/((L-Lsat) * vsat));
 
-
             //Correntes            
             Id = (mu /(L-Lsat)) * ((Qcs*Qcs - Qcd*Qcd)/(2.0 * Cox));
-            
+
             I(d,s) <+ Id;
             I(g,s) <+ 0.0;
             I(b,s) <+ 0.0;
-            
-            
         end //evaluate
     end //analog begin
 endmodule
