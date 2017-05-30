@@ -14,7 +14,7 @@
 
 module jnt(d, g, s, b);
     inout d, g, s, b;
-	electrical d, g, s, b;
+    electrical d, g, s, b;
 
     parameter integer type = `NMOS from [-1 : 1] exclude 0;
     parameter integer level  =    1   from [1 : 1];
