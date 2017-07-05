@@ -1,0 +1,20 @@
+1.1.1:
+- Altered substract influence calculation form from height (H2) to substract potential (phisB);
+- Added  (Cbox) and altered silicon charge (Qsi) to use it;
+- Change (2*H+W) to Wox in all code;
+- Altered order of calculation, calculating capacitance before substract influence;
+- Altered the corner capacitance effect to a paramenter and change the default to 2.5;
+- Removed pow function from integer power calculation;
+- Updated  code to use thermical potencial (fit) instead of (`P_Q/(`P_K*T)).
+
+1.1:
+- Removed channel lenght modulation effect (Leff);
+- Removed effective Source/Drain Voltage (Vdseff);
+- Remove transversal mobility degradation;
+- Altered the constants for charge calculations (Qcs and Qcd);
+- Altered from 2 functions to 1 in suavization fuction for charge calculations (Qcs and Qcd);
+- Removed limln function;
+- Changed from a single potential of source to source and drain pottential in DIBL.
+
+1.0.1:
+- First release.
