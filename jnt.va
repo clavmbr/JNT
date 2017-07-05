@@ -10,7 +10,7 @@
 
 //Verilog model by Moreira, Claudio V
 
-//Revision 1.1.1 July/2017
+//Revision 1.1.2 July/2017
 
 
 
@@ -148,7 +148,7 @@ module jnt(d, g, s, b);
 
     real cte, cte2, Vg2, Vg3, phisdep, phisacc, phis, Qcs;
 
-    real lambda1, lambda2, lambda, U, xmin, phimin;
+    real lambda1, lambda2, lambda, xmin, phimin;
 
     real cteL, cte2L, Vg22, Vg33, phisdepL, phisaccL, phisL, Qcd;
 
@@ -308,17 +308,15 @@ module jnt(d, g, s, b);
 
 
 
-            lambda1 = sqrt((esi*W*tox/(4.0*eox))*(1.0+eox*W/(2.0*esi*tox)));
+            lambda1 = sqrt((esi*W*tox/(2.0*eox))*(1.0+eox*W/(4.0*esi*tox)));
 
             lambda2 = sqrt((esi*H*tox/(4.0*eox))*(1.0+eox*H/(2.0*esi*tox)));
 
-            lambda = 1.0/(sqrt((1.0/lambda1)*(1.0/lambda1)+(0.5/lambda2)*(0.5/lambda2)));
+            lambda = min(lambda1,lambda2);
 
-            U = phisdepL-Vd; //V = phisdep - Vs  
+            xmin = (lambda/2)*ln(abs(((phisdepL-Vd)*limexp(L/lambda)-(phisdep-Vs))/((phisdep-Vs)-(phisdepL-Vd)*limexp(-L/lambda))));
 
-            xmin = (lambda/2)*ln(abs((U*limexp(L/lambda)-phisdep)/(phisdep-U*limexp(-L/lambda))));
-
-            phimin = ((phisdep-Vs)*sinh(xmin/lambda)+U*sinh((L-xmin)/lambda))/(sinh(L/lambda));
+            phimin = ((phisdep-Vs)*sinh(xmin/lambda)+(phisdepL-Vd)*sinh((L-xmin)/lambda))/(sinh(L/lambda));
 
             Vgs = Vgs-phimin;
 
@@ -365,12 +363,6 @@ module jnt(d, g, s, b);
             phisL = phisaccL + phisdepL;
 
             Qcd = (Vgs - Vfb - phisL)*Cox + Qsi;
-
-
-
-            //Mobility Degradation
-
-            //mu = mu / (1.0 + ((Vds * mu)/(L * vsat)));
 
 
 
