@@ -1,7 +1,7 @@
-1.1.2:
-- Change DIBL calculation method.
+0.5.2:
+- Change DIBL calculation mathod.
 
-1.1.1:
+0.5.1:
 - Altered substract influence calculation form from height (H2) to substract potential (phisB);
 - Added  (Cbox) and altered silicon charge (Qsi) to use it;
 - Change (2*H+W) to Wox in all code;
@@ -10,14 +10,14 @@
 - Removed pow function from integer power calculation;
 - Updated  code to use thermical potencial (fit) instead of (`P_Q/(`P_K*T)).
 
-1.1:
+0.5:
 - Removed channel lenght modulation effect (Leff);
 - Removed effective Source/Drain Voltage (Vdseff);
 - Remove transversal mobility degradation;
 - Altered the constants for charge calculations (Qcs and Qcd);
 - Altered from 2 functions to 1 in suavization fuction for charge calculations (Qcs and Qcd);
 - Removed limln function;
-- Changed from a single potential of source to source and drain pottential in DIBL.
+- Changed from a single potential of source to source and drain pottential in DIBL;
 
-1.0.1:
+0.4.1:
 - First release.
