@@ -1,3 +1,33 @@
+0.6.1
+- Changed Wox to Wef;
+- Changed mu to a parameter (u0);
+- Add begin/end on Del_VG, Qcs and Qcd;
+- Change substract dopping to a parameter (nsub);
+- Changed all constants names to match the docs;
+- define all constants at start of code;
+- change all parameters to lower case;
+- Added Removed De and added to Ypot;
+- Changed series resistence to internal node;
+- Added desc to parameters and output nodes
+- Removed +0.0 on Cbox;
+- Removed ml of parameters list and added as define;
+- Changed Id to Ids;
+- Added (disabled) series resistance of gate and bulk;
+- Added Vds_sat;
+
+0.6:
+- Change (eox) and (esi) parameters to define and updated their values;
+- Added (`TYPE) for future pMOS default parameters in future versions;
+- Added voltage interchange for (Vd) and (Vs) for bidirectional current;
+- Updated parameters ranges;
+- Change tnom to pass throught system function;
+- Updated thermal voltage to system function;
+- Updated the code to enclose the blocks within (begin) and (end)
+- Update mass calculation for optimizantion;
+- Change m0 parameter to define and utilize nist/2010 value for eletron mass;
+- Remove unused mce;
+- Added serie resistence effect, with parameters (rd) and (rs), with defaults (rd = 0.0 and rs=rd)
+
 0.5.2:
 - Change DIBL calculation mathod.
 
