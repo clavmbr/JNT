@@ -1,3 +1,6 @@
+0.7.0:
+- Added Capacitance model
+
 0.6.4
 - Added high electric field mobility degradation (Canali model, from sentaurus);
 - Added theta2 mobility degradation;
