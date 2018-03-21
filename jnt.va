@@ -4,7 +4,7 @@
 // Centro Universitario FEI
 //
 //Verilog model by Moreira, Claudio V
-//Revision 0.6.1 October/2017
+//Revision 0.6.4 Fev/2018
 
 `include "discipline.vams"
 `include "constants.vams"
@@ -15,8 +15,8 @@
 
 //Extra phisical constants
 `define PHYSICAL_CONSTANTS_NIST2010
-`define PHY_EPSOX (3.9E-2*`P_EPS0) //Oxide permittivity in F/cm
-`define PHY_EPSSI (11.8E-2*`P_EPS0) //Silicon permittivity in F/cm
+`define PHY_EPSOX (3.9*`P_EPS0) //Oxide permittivity in F/cm
+`define PHY_EPSSI (11.8*`P_EPS0) //Silicon permittivity in F/cm
 `define PHY_Me 9.10938291e-31 //Eletron mass [kg] (nist/2010)
 `define PHY_Ml  0.9163 //Longitudinal electron mass
 
@@ -28,8 +28,7 @@
 `define QC6 2.0
 `define VDSAT1 10.0
 `define VDSAT2 2.0
-`define VDSAT3 2.0
-`define SCE1 5.0
+
 
 module jnt(d, g, s, b);
     inout d, g, s, b;
@@ -37,67 +36,88 @@ module jnt(d, g, s, b);
     (* desc="Gate terminal" *)   electrical g;
     (* desc="Source terminal" *) electrical s;
     (* desc="Bulk terminal" *)   electrical b;
-    (* desc="Internal node" *)   electrical di, gi, si, bi;
+    (* desc="Internal nodes" *)   electrical di, gi, si, bi;
 
     (* desc="Transistor type" *) parameter integer type = `nmos from [-1 : 1] exclude 0;
-    (* desc="Height", units="Meters" *) parameter real h = 10.0E-7 from [0.0 : inf) ;
-    (* desc="Width", units="meters" *) parameter real w = 50.0E-7 from [0.0 : inf);
-    (* desc="Channel Lenght", units="Ohms" *)parameter real l = 100.0E-7 from [0.0 : inf);
-    (* desc="Transistor dopping", units="Meters⁻³" *) parameter real ndop=5.0E18 from [1.0e10 : 1.0e25];
-    (* desc="Gate oxide thickness", units="Meters" *) parameter real tox = 2.0E-7 from [1.0e-10 : inf);
-    (* desc="Burried oxide tickness", units="Meters" *) parameter real tbox = 100.0E-7 from [1.0e-10 : inf);
-    (* desc="Saturation speed", units="Meters/seconds" *) parameter real vsat = 1.0E7 from [0.0 : inf);
-    (* desc="Low eletric field mobility", units="Meters²/(volt*second)" *)parameter real u0 = `TYPE(100.0,40.0) from [0 : 1500];
-    (* desc="Substract dopping", units="Meters⁻³" *) parameter real nsub = 1.0E15 from [1.0E10 : 1.0E25];
-    (* desc="Corner capacitance effect" *)parameter real Cox_crnr = 2.3 from [0.0 : inf); // Corner capacitance
-    (* desc="Gate work function adjust", units="electron Volts" *)parameter real d_FiMS = 0.0 from [0.0 : inf);
-    (* desc="Oxide fixed equivalent charge", units="Coloumbs/meters" *) parameter real qox = 0.0 from [0.0 : inf);   //
-    (* desc=" Burried oxide fixed equivalent charge", units="Coloumbs/meters" *) parameter real qbox = 0.0 from [0.0 : inf); 
-    (* desc="Acuumulation transition parameter" *) parameter real qc4 = 10.156 from [0.0 : `QC3); 
-    (* desc="Acuumulation transition parameter" *) parameter real qc5 = 8.875 from [0.0 : 100);
-    (* desc="Mobility degradation factor" *) parameter real theta = 0.125 from [0.0 : 1.0];
+    (* desc="Height", units="Meters" *) parameter real h = 10.0E-9 from [1.0e-9 : inf) ;
+    (* desc="Width", units="meters" *) parameter real w = 50.0E-9 from [1.0e-9 : inf);
+    (* desc="Channel Lenght", units="Ohms" *)parameter real l = 100.0E-9 from [1.0e-9 : inf);
+    (* desc="Transistor dopping", units="Meters⁻³" *) parameter real ndop=5.0E24 from [1.0e16 : 1.0e30];
+    (* desc="Gate oxide thickness", units="Meters" *) parameter real tox = 2.0E-9 from [1.0e-10 : inf);
+    (* desc="Burried oxide tickness", units="Meters" *) parameter real tbox = 100.0E-9 from [1.0e-9 : inf);
+    (* desc="Saturation speed", units="Meters/seconds" *) parameter real vsat = `TYPE(1.07e5, 8.37e4) from [0.0 : inf);
+    (* desc="Low eletric field mobility", units="Meters²/(volt*second)" *)parameter real u0 = `TYPE(100.0E-4, 40.0E-4) from [0 : 0.15];
+    (* desc="Substract dopping", units="Meters⁻³" *) parameter real nsub = 1.0E21 from [1.0E16 : 1.0E30];
+    (* desc="Corner capacitance effect" *)parameter real Cox_crnr = 2.3 from [0.0 : inf);
+    (* desc="Gate work function adjust", units="electron Volts" *)parameter real d_FiMS = 0.0 from (-inf : inf);
+    (* desc="Oxide fixed equivalent charge", units="Coloumbs/meters" *) parameter real qox = 0.0 from [0.0 : inf);
+    (* desc="Burried oxide fixed equivalent charge", units="Coloumbs/meters" *) parameter real qbox = 0.0 from [0.0 : inf);
+	(* desc="Transistor subthreshold factor" *) parameter real n = 1.0 from [1.0 : 2.0];
+    (* desc="Acuumulation transition parameter" *) parameter real qc4 = 10.156 from (0.0 : `QC3);
+    (* desc="Acuumulation transition parameter" *) parameter real qc5 = 8.875 from (0.0 : 100);
+	(* desc="Short Channel Effect smooth parameter" *) parameter real sce = 15 from [0.0 : 50.0);
+	(* desc="Drain Voltage Saturation Smooth Parameter" *) parameter real vdsat3 = 2.0 from (0.0 : 30.0);
+	(* desc="Channel Lenght Modulation parameter" *) parameter real clm1 = 1 from [ 0.0 : 1];
+	(* desc="Channel Lenght Modulation smooth parameter" *) parameter real clm2 = 10 from ( 0.0 : 100);
+    (* desc="Mobility degradation factor" *) parameter real theta = 0.0 from [0.0 : 5.0];
+	(* desc="Mobility degradation factor" *) parameter real theta2 = 0.0 from [0.0 : 10.0];
+	(* desc="Mobility degradation factor" *) parameter real beta0 = `TYPE(1.109, 1.213) from [ 1.0 : 10);
+	(* desc="Mobility degradation factor" *) parameter real betaexp = `TYPE(0.66, 0.17) from (0 : 1);
     //Series resistence
     (* desc="Drain Resistance", units="Ohms" *)  parameter real rd = 0.0 from [0.0 : inf);
     (* desc="Source Resistance", units="Ohms" *) parameter real rs = rd  from [0.0 : inf);
-    (* desc="Gate Resistance", units="Ohms" *)   parameter real rg = 0.0 from [0.0 : inf);
-    (* desc="Bulk Resistance", units="Ohms" *)   parameter real rb = 0.0 from [0.0 : inf);
 
     //Density of States
     analog function real Nx;
         input T, mdx;
         real T, mdx;
         begin
-            Nx =  2.0*pow((2.0 * `M_PI * mdx * `PHY_Me *`P_K * T)/(`P_H*`P_H),(1.5))*2.0E-6;
+            Nx =  2.0*pow((2.0 * `M_PI * mdx * `PHY_Me *`P_K * T)/(`P_H*`P_H),(1.5))*2.0;
         end
     endfunction //Nx
+	
+    analog function real myln;
+	    input x;
+		real x, y, aux;
+		begin
+		    aux = 5;
+		    y = 1.0 + (1.0 + 5.0)*ln(1.0+ limexp(aux * (-1.0+(x+5.0)/(1.0+5.0))))/(ln(1.0+limexp(aux)));
+			myln = ln (y);
+		end
+	endfunction //myln
 
     //Temperature in Kelvin
     real T;
+
     //Silicon parameters
     real fit;
+    real Nd;
+
     //Capacitances
     real Cox;
-    //????
+    real Cbox, Wef;
+
+    //Parameters
     real Ypot, Qsi, Vfb;
     real Vth, mu, Ids;
+
     // source-drain interchange
     integer interchange;
+    real Vbs, Vbs2, VFBs, xdepl, H2;
     real vds, Vds, Vgs, Vsb, Vgd, Vs, Vd;
     real Qcs,  Qcd;
+	real saida;
 
     analog begin
         begin : temperature_adjustment
             //Celcius to Kelvin
-            T = $temperature; 
+            T = $temperature;
         end //temperature_adjustment
 
         begin : transistors_parameters
             real mt, mde, mdh;
             real Nv, Nc, Eg, fif;
-            real Nd;
             real ni, FiMS, FiBS;
-            real Cbox, Wef;
-            real Vbs, Vbs2, VFBs, xdepl, H2;
 
             mt = 0.1913+T*(-4.042E-5 +T*(1.392E-6 + T *(-4.326E-9 + T*4.42E-12)));
             mde = pow((6.0*sqrt(`PHY_Ml*(mt*mt))),(2.0/3.0));
@@ -122,28 +142,7 @@ module jnt(d, g, s, b);
             fif = fit *ln (Nd/ni);
             FiMS =  fif + (Eg/2.0) + d_FiMS;
 
-            //Substract Influence
-            Vbs = V(b, s);
-            Cbox = `PHY_EPSOX*w/tbox;
-            FiBS = fit * ln(Nd*nsub/(ni*ni));
-            VFBs = FiBS - (qbox/Cbox);
-            Vbs2=(VFBs+`SE1)*(1.0+ln(1.0+limexp(`SE2*(-1.0+(Vbs+`SE1)/(VFBs+`SE1)))) /(ln(1.0+limexp(`SE2))))-`SE1;
-            xdepl = (-`PHY_EPSSI)/(`PHY_EPSOX/tbox) + sqrt((`PHY_EPSSI/(`PHY_EPSOX/tbox))*(`PHY_EPSSI/(`PHY_EPSOX/tbox))+2.0*`PHY_EPSSI*(Vbs2-Vbs)/(`P_Q*Nd));      
-            H2 = h-h*(1.0-ln(1+limexp(`SE3*(1.0-(xdepl)/(h))))/(ln(1.0+limexp(`SE3))));
-
-            //
-            Wef = 2.0*h+w; 
-            Cox = `PHY_EPSOX*((w+2.0*H2)/tox + Cox_crnr);
-            Vfb = FiMS - (qox/Cox);
-            Ypot = (`P_Q*Nd*`PHY_EPSSI*(Wef*Wef))/(Cox*Cox);
-            Qsi = `P_Q*Nd*w*H2 -Cbox*(VFBs-Vbs2);
-
-            //Threshold Voltage
-            Vth = Vfb - Qsi/Cox - (1.0/(`P_Q*Nd))*((Qsi*Qsi)/(`PHY_EPSSI*Wef*Wef));
-        end //transistors_parameters        
-
-        //Drain Current calculation
-        begin // evaluate
+            //Potentials
             vds = type * V(di,si);
             if (vds >= 0.0) begin
                 interchange = 0;
@@ -158,68 +157,102 @@ module jnt(d, g, s, b);
                 Vgs = type * V(g,di);
                 Vgd = type * V(gi,s);
             end
+
+            //Substract Influence
+            Vbs = -Vsb;
+            Cbox = `PHY_EPSOX*w/tbox;
+            FiBS = fit * ln(Nd*nsub/(ni*ni));
+            VFBs = FiBS - (qbox/Cbox);
+            Vbs2=(VFBs+`SE1)*(1.0+ln(1.0+limexp(`SE2*(-1.0+(Vbs+`SE1)/(VFBs+`SE1)))) /(ln(1.0+limexp(`SE2))))-`SE1;
+            xdepl = (-`PHY_EPSSI)/(`PHY_EPSOX/tbox) + sqrt((`PHY_EPSSI/(`PHY_EPSOX/tbox))*(`PHY_EPSSI/(`PHY_EPSOX/tbox))+2.0*`PHY_EPSSI*(Vbs2-Vbs)/(`P_Q*Nd));
+            H2 = h-h*(1.0-ln(1+limexp(`SE3*(1.0-(xdepl)/(h))))/(ln(1.0+limexp(`SE3))));
+            //
+            Wef = 2.0*h+w;
+            Cox = `PHY_EPSOX*((w+2.0*H2)/tox + Cox_crnr);
+            Vfb = FiMS - (qox/Cox);
+            Ypot = (`P_Q*Nd*`PHY_EPSSI*(Wef*Wef))/(Cox*Cox);
+            Qsi = `P_Q*Nd*w*H2 -Cbox*(VFBs-Vbs2);
+
+            //Threshold Voltage
+            Vth = Vfb - Qsi/Cox - (1.0/(`P_Q*Nd))*((Qsi*Qsi)/(`PHY_EPSSI*Wef*Wef));
+        end //transistors_parameters
+
+        //Drain Current calculation
+        begin : static_analysis
+			real beta, d_l;
             Vd = Vds;
             Vs = 0.0;
 
             begin : mob_val
+	 	real aux;
                 mu = u0;
-                mu = mu/(1.0+theta*max((Vgs-Vfb),0.0)*tanh(4.0*(Vgs-Vfb)));
+		        aux = max((Vgs-Vfb),0.0)*tanh(3.0*(Vgs-Vfb));
+                mu = mu/(1.0+theta*aux+theta2*aux*aux);
             end //mob_val
+									
+			begin : Del_Vgs_val //SCE
+    			real QC1, QC2, Vgs1, Vgs2, phisdep, phisacc, phis;
+				real QC1L, QC2L, Vg22, Vg33,phisdepL, phisaccL, phisL;
+				real lambda_w, lambda_h, lambda, ymin, phimin;
+				if (sce > 0.0) begin
+					QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vs)));
+					QC2 = (Vth+`QC6)/(2.0*1.0*fit);
+					Vgs1=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
+					Vgs2 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vgs1+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)));
+					phisdep = Vgs1 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vgs2-Vfb) );
+					phisacc = fit*ln(1.0+ ((Vgs-Vgs1-Vs)*(Vgs-Vgs1-Vs)/(Ypot*fit)));
+					phis = phisacc + phisdep;
 
-            begin : Vdsat_val
+					QC1L = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vd)));
+					QC2L = (Vth+`QC6)/(2.0*1.0*fit);
+					Vg22=Vfb*(1.0-ln(1.0+ limexp(QC1L*(1.0- ((Vgs-Vd)/Vfb))))/ln(1.0+limexp(QC1L)));
+					Vg33 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2L*(-1.0+((Vg22+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2L)));
+					phisdepL = Vg22 - Vfb + Vd - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg33-Vfb));
+					phisaccL = fit*ln(1.0+ ((Vgs-Vg22-Vd)*(Vgs-Vg22-Vd)/(Ypot*fit)));
+					phisL = phisaccL + phisdepL;
+
+					lambda_w = sqrt((`PHY_EPSSI*w*tox/(2.0*`PHY_EPSOX))*(1.0+`PHY_EPSOX*w/(4.0*`PHY_EPSSI*tox)));
+					lambda_h = sqrt((`PHY_EPSSI*h*tox/(4.0*`PHY_EPSOX))*(1.0+`PHY_EPSOX*h/(2.0*`PHY_EPSSI*tox)));
+					lambda = 1.0/sqrt(1.0/(lambda_w*lambda_w) + 1.0/(4.0*lambda_h*lambda_h));
+					ymin = (lambda*0.5)*(myln((Vd-phisdepL)*limexp(l/lambda)-(Vs-phisdep))-ln((Vs-phisdep)-(Vd-phisdepL)*exp(-l/lambda)));
+					ymin = l*(1.0 - ln(1.0+limexp(sce*(1.0-ymin/l)))/ln(1.0+limexp(sce)));
+					phimin = ((Vs-phisdep)*sinh(ymin/lambda)+(Vd-phisdepL)*sinh((l-ymin)/lambda))/(sinh(l/lambda));
+					Vgs = Vgs+phimin;
+					saida =phimin;
+				end //if
+            end//Del_Vgs_Val	
+
+			begin : Vdsat_val
                 real QC1, QC2, Vg2, Vg3, phisdep, phisacc, phis, Qtot;
-                real Qsat, Vdsat, E, aux;
+                real Qsat, Vdsat, E, aux, Vdsat2, Vgt;
                 QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vs)));
-                QC2 = (Vth+`QC6)/(2.0*1.0*fit);
-                QC2 = QC2-0.5*QC2/(1.0+1.0*exp(-3.0*(Vgs-Vth-Vs))); 
+                QC2 = (Vth+`QC6)/(2.0*n*fit);
                 Vg2=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
                 Vg3 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vg2+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)) );
                 phisdep = Vg2 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg3-Vfb) );
                 phisacc = fit*ln(1.0+ ((Vgs-Vg2-Vs)*(Vgs-Vg2-Vs)/(Ypot*fit)));
                 phis = phisacc + phisdep;
                 Qtot = (Vgs - Vfb - phis)*Cox + Qsi;
-
-                Qsat   = -vsat*Cox*l/mu + sqrt((vsat*Cox*l/mu)*(vsat*Cox*l/mu) + Qtot*Qtot);
-                E = Ypot*Cox*Cox/4.0;
-                aux = (-Qsat/(2.0*E)+Qsi/(2.0*E)+1.0/Cox);          
+                
+				//Trevisoli's model (Vgt)
+				Qsat   = -vsat*Cox*l/mu + sqrt((vsat*Cox*l/mu)*(vsat*Cox*l/mu) + Qtot*Qtot);
+                E = Ypot*Cox*Cox*0.25;
+                aux = (-Qsat/(2.0*E)+Qsi/(2.0*E)+1.0/Cox);
                 Vdsat = E*( aux*aux - (1.0/Cox)*(1.0/Cox)  ) - Vfb+Vgs;
-                Vdsat = fit+(fit+`VDSAT2)*ln(1.0+ limexp(`VDSAT1*(-1.0+(Vdsat+`VDSAT2)/(fit+`VDSAT2))))/(ln(1.0+limexp(`VDSAT1))); 
-                Vd = Vdsat*(1.0-(log(1.0+limexp(`VDSAT3*(1.0-Vd/Vdsat))))/(log(1.0+limexp(`VDSAT3))));
+                
+				//Paz's model
+				//Vdsat2 = 0.08 + 0.115*pow((l*1e7),0.33)*(Vgs - Vth);
+				//Vgt = Vgs - Vth;
+                //Vdsat = Vdsat2*0.5*(1+tanh(Vgt))+ Vgt*0.5*(1+tanh(Vgt));
+				
+				Vdsat = fit+(fit+`VDSAT2)*ln(1.0+ limexp(`VDSAT1*(-1.0+(Vdsat+`VDSAT2)/(fit+`VDSAT2))))/(ln(1.0+limexp(`VDSAT1)));
+				Vd = Vdsat*(1.0-(log(1.0+limexp(vdsat3*(1.0-Vds/Vdsat))))/(log(1.0+limexp(vdsat3))));
             end //Vdsat_val
-
-            begin : Del_Vg_val //SCE
-                real QC1, QC2, Vgs1, Vgs2, phisdep;
-                real QC1L, QC2L, Vg22, Vg33,phisdepL;
-                real lambda_w, lambda_h, lambda, ymin, phimin;
-                QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vs)));
-                QC2 = (Vth+`QC6)/(2.0*1.0*fit);
-                QC2 = QC2-0.5*QC2/(1.0+limexp(-3.0*(Vgs-Vth-Vs))); 
-                Vgs1=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
-                Vgs2 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vgs1+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)));
-                phisdep = Vgs1 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vgs2-Vfb) );
-
-                QC1L = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vd)));
-                QC2L = (Vth+`QC6)/(2.0*1.0*fit);
-                QC2L = QC2L-0.5*QC2L/(1.0+limexp(-3.0*(Vgs-Vth-Vd)));
-                Vg22=Vfb*(1.0-ln(1.0+ limexp(QC1L*(1.0- ((Vgs-Vd)/Vfb))))/ln(1.0+limexp(QC1L)));          
-                Vg33 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2L*(-1.0+((Vg22+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2L)));            
-                phisdepL = Vg22 - Vfb + Vd - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg33-Vfb));
-
-                lambda_w = sqrt((`PHY_EPSSI*w*tox/(2.0*`PHY_EPSOX))*(1.0+`PHY_EPSOX*w/(4.0*`PHY_EPSSI*tox)));
-                lambda_h = sqrt((`PHY_EPSSI*h*tox/(4.0*`PHY_EPSOX))*(1.0+`PHY_EPSOX*h/(2.0*`PHY_EPSSI*tox)));
-                //lambda = 1.0/sqrt(1.0/(lambda_w*lambda_w) + 1.0/(4.0*lambda_h*lambda_h));
-                lambda = min(lambda_w,lambda_h);
-                ymin = (lambda/2.0)*ln((((phisdepL-Vd)*limexp(l/lambda)-(phisdep-Vs))/((phisdep-Vs)-(phisdepL-Vd)*limexp(-l/lambda))));
-                ymin = l*(1.0 -log(1.0+limexp(`SCE1*(1.0-ymin/l)))/log(1.0+exp(`SCE1)));
-                phimin = ((phisdep-Vs)*sinh(ymin/lambda)+(phisdepL-Vd)*sinh((l-ymin)/lambda))/(sinh(l/lambda));
-                Vgs = Vgs-phimin;
-            end//Del_Vg_val
-
+			
             begin : Qcs_val
                 real QC1, QC2, Vg2, Vg3, phisdep, phisacc, phis;
                 QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vs)));
-                QC2 = (Vth+`QC6)/(2.0*1.0*fit);
-                QC2 = QC2-0.5*QC2/(1.0+limexp(-3.0*(Vgs-Vth-Vs))); 
+                QC2 = (Vth+`QC6)/(2.0*n*fit);
                 Vg2=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
                 Vg3 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vg2+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)) );
                 phisdep = Vg2 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg3-Vfb) );
@@ -229,34 +262,46 @@ module jnt(d, g, s, b);
             end //Qcs_val
 
             begin : Qcd_val
-                real QC1, QC2, Vg22, Vg33, phisdepL, phisaccL, phisL;
+                real QC1, QC2, Vg2, Vg3, phisdep, phisacc, phis;
                 QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vd)));
-                QC2 = (Vth+`QC6)/(2.0*1.0*fit);
-                QC2 = QC2-0.5*QC2/(1.0+limexp(-3.0*(Vgs-Vth-Vd)));
-                Vg22=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vd)/Vfb))))/ln(1.0+limexp(QC1)));          
-                Vg33 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vg22+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)));            
-                phisdepL = Vg22 - Vfb + Vd - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg33-Vfb));
-                phisaccL = fit*ln(1.0+ ((Vgs-Vg22-Vd)*(Vgs-Vg22-Vd)/(Ypot*fit)));
-                phisL = phisaccL + phisdepL;
-                Qcd = (Vgs - Vfb - phisL)*Cox + Qsi;
+                QC2 = (Vth+`QC6)/(2.0*n*fit);
+                Vg2=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vd)/Vfb))))/ln(1.0+limexp(QC1)));
+                Vg3 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vg2+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)));
+                phisdep = Vg2 - Vfb + Vd - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg3-Vfb));
+                phisacc = fit*ln(1.0+ ((Vgs-Vg2-Vd)*(Vgs-Vg2-Vd)/(Ypot*fit)));
+                phis = phisacc + phisdep;
+                Qcd = (Vgs - Vfb - phis)*Cox + Qsi;
             end //Qcd_val
 
-            //Currents            
-            Ids = (Qcs*Qcs-Qcd*Qcd)/(2.0*Cox*(l/mu));
-        end //evaluate
+			begin : delta_L
+			    real aux, Vgt;
+				Vgt = Vgs - Vth;
+				if (Vgt < 0.0) begin
+				    aux = 0.0;
+				end else begin
+					aux = max((Vd-Vgt),0.0);
+				end
+			    d_l = clm1*sqrt(`PHY_EPSSI*aux/(`P_Q*Nd)*(1.0+tanh(clm2*aux)));
+			end//delta_L
+			
+            //DC Current
+			beta = beta0*pow((T/300.0),betaexp);
+			mu = mu/(  pow((1.0+pow((mu*Vd/(vsat*(l-d_l))),beta)),(1.0/beta)));
+			Ids = mu/((l-d_l)*Cox)*(Qcs*Qcs-Qcd*Qcd)*0.5;
+			
+        end //static_analysis
 
         if (interchange==0) begin
             I(di,si) <+ type*Ids;
-            I(g,si) <+ Qcs;
-            I(b,si) <+ Qcd;        
+            I(g,si) <+ Vd;
+            I(b,si) <+ 0;
         end else begin
             I(di,si) <+ -type*Ids;
             I(g,si) <+ 0;
             I(b,si) <+ 0;
         end
-        V(d,di) <+ 0;//I(di,si)*rd;
-        V(si,s) <+ 0;//I(di,si)*rs;
-        //V(g,gi) <+ (I(gi,si)+I(gi,di))*rg
-        //V(b,bi) <+ (I(bi,si)+I(bi,di))*rg
+        V(d,di) <+ I(di,si)*rd;
+        V(si,s) <+ I(di,si)*rs;
+
     end //analog begin
 endmodule
