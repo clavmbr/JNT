@@ -1,3 +1,27 @@
+0.6.4
+- Added high electric field mobility degradation (Canali model, from sentaurus);
+- Added theta2 mobility degradation;
+- Changed theta default to 0;
+- Added subthreshold slope factor (capacitance factor);
+- Added Vdsat3 as an parameter;
+- Added Ymax limitation on length;
+- Added Ymax limitation smooth paramenter (sce);
+- Added channel lenght modulation and a adjust parameter;
+- Added High field mobility saturation;
+- Added theta2 (mobility degradation);
+- Changed the saturation velocity to sentaurus values;
+- Adjusted some parameters limits;
+
+0.6.3:
+- Fixed Substrate voltage
+- Changed unamed evaluate block to static_analysis
+- Disabled del_Vg because calculations errors;
+- Code validated with Trevisoli's MATLAB code.
+
+0.6.2:
+- Changed units to SI (energy stiil in eV);
+- Changed some parameter limits;
+
 0.6.1
 - Changed Wox to Wef;
 - Changed mu to a parameter (u0);
