@@ -4,7 +4,7 @@
 // Centro Universitario FEI
 //
 //Verilog model by Moreira, Claudio V
-//Revision 0.6.4 Fev/2018
+//Revision 0.7.0 Mar/2018
 
 `include "discipline.vams"
 `include "constants.vams"
@@ -48,7 +48,7 @@ module jnt(d, g, s, b);
     (* desc="Saturation speed", units="Meters/seconds" *) parameter real vsat = `TYPE(1.07e5, 8.37e4) from [0.0 : inf);
     (* desc="Low eletric field mobility", units="Meters²/(volt*second)" *)parameter real u0 = `TYPE(100.0E-4, 40.0E-4) from [0 : 0.15];
     (* desc="Substract dopping", units="Meters⁻³" *) parameter real nsub = 1.0E21 from [1.0E16 : 1.0E30];
-    (* desc="Corner capacitance effect" *)parameter real Cox_crnr = 2.3 from [0.0 : inf);
+    (* desc="Corner capacitance effect" *)parameter real Cox_crnr = 2.3059 from [0.0 : inf);
     (* desc="Gate work function adjust", units="electron Volts" *)parameter real d_FiMS = 0.0 from (-inf : inf);
     (* desc="Oxide fixed equivalent charge", units="Coloumbs/meters" *) parameter real qox = 0.0 from [0.0 : inf);
     (* desc="Burried oxide fixed equivalent charge", units="Coloumbs/meters" *) parameter real qbox = 0.0 from [0.0 : inf);
@@ -105,8 +105,12 @@ module jnt(d, g, s, b);
     integer interchange;
     real Vbs, Vbs2, VFBs, xdepl, H2;
     real vds, Vds, Vgs, Vsb, Vgd, Vs, Vd;
-    real Qcs,  Qcd;
-	real saida;
+    real Qcs,  Qcd, d_l;
+	
+	//Capacitance calculation
+	real Cgs, Cgd, Cgb;
+	real Cdg, Cds, Cdb;
+	real Csg, Csd, Csb;
 
     analog begin
         begin : temperature_adjustment
@@ -118,6 +122,8 @@ module jnt(d, g, s, b);
             real mt, mde, mdh;
             real Nv, Nc, Eg, fif;
             real ni, FiMS, FiBS;
+
+
 
             mt = 0.1913+T*(-4.042E-5 +T*(1.392E-6 + T *(-4.326E-9 + T*4.42E-12)));
             mde = pow((6.0*sqrt(`PHY_Ml*(mt*mt))),(2.0/3.0));
@@ -179,7 +185,7 @@ module jnt(d, g, s, b);
 
         //Drain Current calculation
         begin : static_analysis
-			real beta, d_l;
+			real beta;
             Vd = Vds;
             Vs = 0.0;
 
@@ -192,7 +198,7 @@ module jnt(d, g, s, b);
 									
 			begin : Del_Vgs_val //SCE
     			real QC1, QC2, Vgs1, Vgs2, phisdep, phisacc, phis;
-				real QC1L, QC2L, Vg22, Vg33,phisdepL, phisaccL, phisL;
+				real QC1L, QC2L, Vgs11, Vgs22,phisdepL, phisaccL, phisL;
 				real lambda_w, lambda_h, lambda, ymin, phimin;
 				if (sce > 0.0) begin
 					QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vs)));
@@ -205,10 +211,10 @@ module jnt(d, g, s, b);
 
 					QC1L = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vd)));
 					QC2L = (Vth+`QC6)/(2.0*1.0*fit);
-					Vg22=Vfb*(1.0-ln(1.0+ limexp(QC1L*(1.0- ((Vgs-Vd)/Vfb))))/ln(1.0+limexp(QC1L)));
-					Vg33 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2L*(-1.0+((Vg22+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2L)));
-					phisdepL = Vg22 - Vfb + Vd - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg33-Vfb));
-					phisaccL = fit*ln(1.0+ ((Vgs-Vg22-Vd)*(Vgs-Vg22-Vd)/(Ypot*fit)));
+					Vgs11=Vfb*(1.0-ln(1.0+ limexp(QC1L*(1.0- ((Vgs-Vd)/Vfb))))/ln(1.0+limexp(QC1L)));
+					Vgs22 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2L*(-1.0+((Vgs11+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2L)));
+					phisdepL = Vgs11 - Vfb + Vd - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vgs22-Vfb));
+					phisaccL = fit*ln(1.0+ ((Vgs-Vgs11-Vd)*(Vgs-Vgs11-Vd)/(Ypot*fit)));
 					phisL = phisaccL + phisdepL;
 
 					lambda_w = sqrt((`PHY_EPSSI*w*tox/(2.0*`PHY_EPSOX))*(1.0+`PHY_EPSOX*w/(4.0*`PHY_EPSSI*tox)));
@@ -218,19 +224,18 @@ module jnt(d, g, s, b);
 					ymin = l*(1.0 - ln(1.0+limexp(sce*(1.0-ymin/l)))/ln(1.0+limexp(sce)));
 					phimin = ((Vs-phisdep)*sinh(ymin/lambda)+(Vd-phisdepL)*sinh((l-ymin)/lambda))/(sinh(l/lambda));
 					Vgs = Vgs+phimin;
-					saida =phimin;
 				end //if
             end//Del_Vgs_Val	
 
 			begin : Vdsat_val
-                real QC1, QC2, Vg2, Vg3, phisdep, phisacc, phis, Qtot;
+                real QC1, QC2, Vgs1, Vgs2, phisdep, phisacc, phis, Qtot;
                 real Qsat, Vdsat, E, aux, Vdsat2, Vgt;
                 QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vs)));
                 QC2 = (Vth+`QC6)/(2.0*n*fit);
-                Vg2=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
-                Vg3 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vg2+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)) );
-                phisdep = Vg2 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg3-Vfb) );
-                phisacc = fit*ln(1.0+ ((Vgs-Vg2-Vs)*(Vgs-Vg2-Vs)/(Ypot*fit)));
+                Vgs1=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
+                Vgs2 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vgs1+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)) );
+                phisdep = Vgs1 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vgs2-Vfb) );
+                phisacc = fit*ln(1.0+ ((Vgs-Vgs1-Vs)*(Vgs-Vgs1-Vs)/(Ypot*fit)));
                 phis = phisacc + phisdep;
                 Qtot = (Vgs - Vfb - phis)*Cox + Qsi;
                 
@@ -250,25 +255,25 @@ module jnt(d, g, s, b);
             end //Vdsat_val
 			
             begin : Qcs_val
-                real QC1, QC2, Vg2, Vg3, phisdep, phisacc, phis;
+                real QC1, QC2, Vgs1, Vgs2, phisdep, phisacc, phis;
                 QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vs)));
                 QC2 = (Vth+`QC6)/(2.0*n*fit);
-                Vg2=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
-                Vg3 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vg2+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)) );
-                phisdep = Vg2 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg3-Vfb) );
-                phisacc = fit*ln(1.0+ ((Vgs-Vg2-Vs)*(Vgs-Vg2-Vs)/(Ypot*fit)));
+                Vgs1=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
+                Vgs2 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vgs1+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)) );
+                phisdep = Vgs1 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vgs2-Vfb) );
+                phisacc = fit*ln(1.0+ ((Vgs-Vgs1-Vs)*(Vgs-Vgs1-Vs)/(Ypot*fit)));
                 phis = phisacc + phisdep;
                 Qcs = (Vgs - Vfb - phis)*Cox + Qsi;
             end //Qcs_val
 
             begin : Qcd_val
-                real QC1, QC2, Vg2, Vg3, phisdep, phisacc, phis;
+                real QC1, QC2, Vgs1, Vgs2, phisdep, phisacc, phis;
                 QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vd)));
                 QC2 = (Vth+`QC6)/(2.0*n*fit);
-                Vg2=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vd)/Vfb))))/ln(1.0+limexp(QC1)));
-                Vg3 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vg2+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)));
-                phisdep = Vg2 - Vfb + Vd - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vg3-Vfb));
-                phisacc = fit*ln(1.0+ ((Vgs-Vg2-Vd)*(Vgs-Vg2-Vd)/(Ypot*fit)));
+                Vgs1=Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vd)/Vfb))))/ln(1.0+limexp(QC1)));
+                Vgs2 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vgs1+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)));
+                phisdep = Vgs1 - Vfb + Vd - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vgs2-Vfb));
+                phisacc = fit*ln(1.0+ ((Vgs-Vgs1-Vd)*(Vgs-Vgs1-Vd)/(Ypot*fit)));
                 phis = phisacc + phisdep;
                 Qcd = (Vgs - Vfb - phis)*Cox + Qsi;
             end //Qcd_val
@@ -289,12 +294,125 @@ module jnt(d, g, s, b);
 			mu = mu/(  pow((1.0+pow((mu*Vd/(vsat*(l-d_l))),beta)),(1.0/beta)));
 			Ids = mu/((l-d_l)*Cox)*(Qcs*Qcs-Qcd*Qcd)*0.5;
 			
-        end //static_analysis
+	end //static_analysis
+	
+	begin : Capacitance_val
+		real Qcd_ns, dQcd_dVg, dQcd_dVs, dQcd_dVd, dQcd_dVb;
+		real dQcs_dVg, dQcs_dVs, dQcs_dVd, dQcs_dVb;
+		real dVbs2_dVb, dxdepl_dVb;
+		real dphisB_dVb, dVth_dVb;
+		real dQg_dVg, dQg_dVs, dQg_dVd, dQg_dVb;
+		real dQd_dVg, dQd_dVs, dQd_dVd, dQd_dVb;
+		real dQs_dVg, dQs_dVd, dQs_dVb;
+		real aux1, aux2, aux3, aux4, Cdd, Cgg;
+		dVbs2_dVb  = `SE2*limexp(`SE2*(-1.0+(Vbs+`SE1)/(VFBs+`SE1)))/((1.0+limexp(`SE2*(-1.0+(Vbs+`SE1)/(VFBs+`SE1))))*ln(1.0+limexp(`SE2)));
+		aux1 = `PHY_EPSSI*tbox/`PHY_EPSOX; 
+		aux2 = `PHY_EPSSI/(`P_Q*Nd);
+		dxdepl_dVb = aux2*(dVbs2_dVb - 1.0)/sqrt(aux1*aux1+2.0*(Vbs2-Vbs)*aux2);
+		dphisB_dVb = xdepl*dxdepl_dVb/aux2;
+		dVth_dVb   = Cbox*(dphisB_dVb-1.0) * (1.0/Cox + 2.0*Qsi/(`P_Q*Nd*`PHY_EPSSI*(Wef*Wef)));
+
+		begin : del_Qcd
+			real QC1, QC2, Vgs1, Vgs2, phisdep, phisacc, phis;
+			real dVgs1_dVg, dVgs1_dVs, dVgs1_dVd, dVgs1_dVb, dVgs2_dVg, dVgs2_dVs, dVgs2_dVd, dVgs2_dVb;
+			real dphisdep_dVg, dphisdep_dVs, dphisdep_dVd, dphisdep_dVb, dphisacc_dVg, dphisacc_dVs, dphisacc_dVd, dphisacc_dVb;
+			QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vds)));
+			QC2 = (Vth+`QC6)/(2.0*1.0*fit);
+			Vgs1 = Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vds)/Vfb))))/ln(1.0+limexp(QC1)));
+			Vgs2 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vgs1+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)));
+			phisdep = Vgs1 - Vfb + Vds - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vgs2-Vfb));
+			phisacc = fit*ln(1.0+ ((Vgs-Vgs1-Vds)*(Vgs-Vgs1-Vds)/(Ypot*fit)));
+			phis = phisacc + phisdep;
+			Qcd_ns = (Vgs - Vfb - phis)*Cox + Qsi;			
+			dVgs1_dVg = QC1*limexp(QC1*(1.0-(Vgs-Vds)/Vfb))/((1.0+limexp(QC1*(1.0-(Vgs-Vds)/Vfb)))*ln(1.0+limexp(QC1)));
+			dVgs1_dVs = 0.0;
+			dVgs1_dVd = -1.0*dVgs1_dVg;
+			dVgs1_dVb = 0.0;
+			dVgs2_dVg = QC2*dVgs1_dVg*limexp(QC2*(-1.0+(Vgs1+`QC6)/(Vth+`QC6)))/(ln(1.0+limexp(QC2))*(1.0+limexp(QC2*(-1.0+(Vgs1+`QC6)/(Vth+`QC6)))));
+			dVgs2_dVs = 0.0;
+			dVgs2_dVd = -1.0*dVgs2_dVg;
+			dVgs2_dVb = dVth_dVb*ln(1.0+limexp(QC2*(-1.0+(Vgs1+`QC6)/(Vth+`QC6))))/ln(1.0+limexp(QC2)) + dVth_dVb+ (QC2*(Vgs1+`QC6)*dVth_dVb*limexp(QC2*(-1.0+(Vgs1+`QC6)/(Vth+`QC6))))/((1.0+limexp(QC2*(-1.0+(Vgs1+`QC6)/(Vth+`QC6))))*ln(1.0+limexp(QC2))); //conferir
+			aux1 = sqrt(Ypot/(Ypot - 4.0*(Vgs2-Vfb)));
+			dphisdep_dVg = dVgs1_dVg - dVgs2_dVg * aux1 ;
+			dphisdep_dVs = 0.0;
+			dphisdep_dVd = 1.0-dphisdep_dVg;
+			dphisdep_dVb = -dVgs2_dVb*aux1;
+			aux1 = Vgs-Vgs1-Vds;
+			aux2 = 2.0*aux1/(Ypot*(1.0 + aux1*aux1/(Ypot*fit)));
+			dphisacc_dVg = (1.0-dVgs1_dVg)*aux2;
+			dphisacc_dVs = 0.0;
+			dphisacc_dVd = (-1.0-dVgs1_dVd)*aux2;
+			dphisacc_dVb =0.0;	
+			dQcd_dVg = (1.0 - (dphisdep_dVg + dphisacc_dVg))*Cox;
+			dQcd_dVs = -(dphisdep_dVs + dphisacc_dVs)*Cox;
+			dQcd_dVd = -(dphisdep_dVd + dphisacc_dVd)*Cox;
+			dQcd_dVb = -(dphisdep_dVb + dphisacc_dVb)*Cox + (1.0 - dphisB_dVb)*Cbox;
+		end //del_Qcd
+
+		begin : del_Qcs
+			real QC1, QC2, Vgs1, Vgs2, phisdep, phisacc, phis;
+			real dVgs1_dVg, dVgs1_dVs, dVgs1_dVd, dVgs1_dVb, dVgs2_dVg, dVgs2_dVs, dVgs2_dVd, dVgs2_dVb;
+			real dphisdep_dVg, dphisdep_dVs, dphisdep_dVd, dphisdep_dVb, dphisacc_dVg, dphisacc_dVs, dphisacc_dVd, dphisacc_dVb;
+			QC1 = `QC3-qc4/(1.0+limexp(-qc5 *(Vgs-Vth-Vs)));
+			QC2 = (Vth+`QC6)/(2.0*1.0*fit);
+			Vgs1 = Vfb*(1.0-ln(1.0+ limexp(QC1*(1.0- ((Vgs-Vs)/Vfb))))/ln(1.0+limexp(QC1)));
+			Vgs2 = Vth+(Vth+`QC6)*(ln(1.0+limexp(QC2*(-1.0+((Vgs1+`QC6)/(Vth+`QC6)))))/ln(1.0+limexp(QC2)));
+			phisdep = Vgs1 - Vfb + Vs - Ypot/2.0 + sqrt( (Ypot/2.0)*(Ypot/2.0) - Ypot*(Vgs2-Vfb));
+			phisacc = fit*ln(1.0+ ((Vgs-Vgs1-Vs)*(Vgs-Vgs1-Vs)/(Ypot*fit)));
+			phis = phisacc + phisdep;
+			Qcs = (Vgs - Vfb - phis)*Cox + Qsi;
+			dVgs1_dVg = QC1*limexp(QC1*(1.0-(Vgs-Vs)/Vfb))/((1.0+limexp(QC1*(1.0-(Vgs-Vs)/Vfb)))*ln(1.0+limexp(QC1)));
+			dVgs1_dVs = -1.0*dVgs1_dVg;
+			dVgs1_dVd = 0.0;
+			dVgs1_dVb = 0.0;
+			dVgs2_dVg = QC2*dVgs1_dVg*limexp(QC2*(-1.0+(Vgs1+`QC6)/(Vth+`QC6)))/(ln(1.0+limexp(QC2))*(1.0+limexp(QC2*(-1.0+(Vgs1+`QC6)/(Vth+`QC6)))));
+			dVgs2_dVs = -1.0*dVgs2_dVg;
+			dVgs2_dVd = 0.0;
+			dVgs2_dVb = dVth_dVb*(1.0+limexp(QC2*(-1.0+Vgs1/Vth)))/ln(1.0+limexp(QC2))+dVth_dVb+ (QC2*Vth*limexp(QC2*(-1.0+Vgs1/Vth)))/((1.0+limexp(QC2*(-1.0+Vgs1/Vth)))*ln(1.0+limexp(QC2)))*((1.0/Vth*dVgs1_dVb)-(Vgs1/Vth)*dVth_dVb);
+			aux1 = sqrt(Ypot/(Ypot-4.0*(Vgs2-Vfb)));
+			dphisdep_dVg = dVgs1_dVg - dVgs2_dVg*aux1;
+			dphisdep_dVs = 1.0 - dphisdep_dVg;
+			dphisdep_dVd = 0.0;
+			dphisdep_dVb = - dVgs2_dVb*aux1;
+			aux1 = Vgs-Vgs1-Vs;
+			aux2 = 2.0*aux1/(Ypot*(1.0+aux1*aux1/(Ypot*fit)));
+			dphisacc_dVg = (1.0-dVgs1_dVg)*aux2;
+			dphisacc_dVs = (-1.0-dVgs1_dVs)*aux2;
+			dphisacc_dVd = 0.0;
+			dphisacc_dVb =0.0;
+			dQcs_dVg = (1.0 - (dphisdep_dVg + dphisacc_dVg))*Cox;
+			dQcs_dVs = -(dphisdep_dVs + dphisacc_dVs)*Cox;
+			dQcs_dVd = -(dphisdep_dVd + dphisacc_dVd)*Cox;
+			dQcs_dVb = -(dphisdep_dVb + dphisacc_dVb)*Cox + (1.0 - dphisB_dVb)*Cbox;
+		end //del_Qcs
+		
+		aux1 = (Qcs*Qcs+Qcs*Qcd_ns+Qcd_ns*Qcd_ns)/((Qcs+Qcd_ns)*(Qcs+Qcd_ns));
+		aux2 = (2.0*Qcs+Qcd_ns)/(Qcs+Qcd_ns);
+		aux3 = (Qcs+2.0*Qcd_ns)/(Qcs+Qcd_ns);
+		aux4 = 2.0*(l-d_l)/3.0;
+		Cgg = aux4*(dQcs_dVg*aux2+dQcd_dVg*aux3-(dQcs_dVg+dQcd_dVg)*aux1);
+		Cgs = aux4*(dQcs_dVs*aux2+dQcd_dVs*aux3-(dQcs_dVs+dQcd_dVs)*aux1);
+		Cgd = aux4*(dQcs_dVd*aux2+dQcd_dVd*aux3-(dQcs_dVd+dQcd_dVd)*aux1);
+		Cgb = aux4*(dQcs_dVb*aux2+dQcd_dVb*aux3-(dQcs_dVb+dQcd_dVb)*aux1);//+Cbox2.*L.*(-1+dphisB_dVb)
+		aux4 = 1.0/(Qcs*Qcs*(3.0*Qcd_ns + Qcs) + Qcd_ns*Qcd_ns*(Qcd_ns+3.0*Qcs)); 
+		aux1 = (Qcs*(Qcd_ns*Qcd_ns + Qcs*(Qcs+3*Qcd)))*aux4;
+		aux2 = (Qcd_ns*(8.0*Qcs*Qcs + Qcd_ns*(9.0*Qcs + 3.0*Qcd_ns)))*aux4;
+		aux3 = -2.0*(l-d_l)/15.0;
+		Cdg = aux3*(2.0*dQcs_dVg*aux1+dQcd_dVg*aux2);
+		Cds = aux3*(2.0*dQcs_dVs*aux1+dQcd_dVs*aux2);
+		Cdd = aux3*(2.0*dQcs_dVd*aux1+dQcd_dVd*aux2);
+		Cdb = aux3*(2.0*dQcs_dVb*aux1+dQcd_dVb*aux2);
+		Csg = -Cgg - Cdg;
+		Csd = -Cgd - Cdd;
+		Csg = -Cgb - Cdb;
+
+		end //Capacitance_val
+	
 
         if (interchange==0) begin
             I(di,si) <+ type*Ids;
-            I(g,si) <+ Vd;
-            I(b,si) <+ 0;
+            I(g,si) <+ Cds;
+            I(b,si) <+ Cdg;
         end else begin
             I(di,si) <+ -type*Ids;
             I(g,si) <+ 0;
@@ -305,3 +423,13 @@ module jnt(d, g, s, b);
 
     end //analog begin
 endmodule
+
+//Qgs = dQg_dVs*Vgs;
+//Qgd = dQg_dVd*Vgd;
+//Qgb = dQg_dVb*(Vgs+Vsb);
+//Qdg = -dQd_dVg*Vgd;
+//Qds = dQd_dVs*Vds;
+//Qdb = dQd_dVb*(Vds+Vsb);
+//Qsg = -dQs_dVg*Vgs;
+//Qsd = -dQs_dVd*Vds;
+//Qsb = dQs_dVg*Vsb;
