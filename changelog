@@ -1,3 +1,9 @@
+0.7.0:
+- Added Capacitance model.
+- Changed SCE phimin to Cerdeira's formula;
+- Changed Vdsat to Paz's model;
+- Fixed channel lenght modulation effect, changing Vd_eff to real Vd.
+
 0.6.4
 - Added high electric field mobility degradation (Canali model, from sentaurus);
 - Added theta2 mobility degradation;
@@ -53,7 +59,7 @@
 - Added serie resistence effect, with parameters (rd) and (rs), with defaults (rd = 0.0 and rs=rd)
 
 0.5.2:
-- Change DIBL calculation mathod.
+- Change DIBL calculation method.
 
 0.5.1:
 - Altered substract influence calculation form from height (H2) to substract potential (phisB);
