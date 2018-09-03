@@ -4,7 +4,7 @@
 // Centro Universitario FEI
 //
 //Verilog model by Moreira, Claudio V
-//Revision 0.7.0 Mar/2018
+//Revision 0.7.0 Set/2018
 
 `include "disciplines.vams"
 `include "constants.vams"
